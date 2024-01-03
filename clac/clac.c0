@@ -1,0 +1,354 @@
+/**************************************************************************/
+/*              COPYRIGHT Carnegie Mellon University 2023                 */
+/* Do not post this file or any derivative on a public site or repository */
+/**************************************************************************/
+/*
+ * Clac, stack-based calculator language
+ *
+ * 15-122 Principles of Imperative Computation
+ */
+
+
+/* From the perspective of the clac-main.c0 file, state_t is an
+ * abstract type. (typedef ____* state_t) This file contains the
+ * implementation of the state_t type. You will need to modify
+ * this type when you do task 3. */
+
+#use <string>
+#use <parse>
+#use <conio>
+#use <args>
+#use <util>
+
+
+struct state_header{
+  dict_t dict;
+};
+
+
+typedef struct state_header* state_t;  
+state_t init_state()
+//@ensures \result != NULL;
+{
+  state_t new=alloc(struct state_header);
+  new->dict= dict_new();
+  return new;
+
+}
+
+
+//FUNCTION THAT COMPUTES POWER 
+
+int pow(int x, int y)  
+//@requires y >= 0;  
+{  
+  if (y == 0)  
+    return 1;  
+  else  
+    return x * pow(x, y-1);  
+}  
+
+//END OF HELPER FUNCTIONS
+
+/* Main clac interpreter. */
+/* Return true: clac top-level interpreter will expect more input */
+/* Return false: clac top-level interpreter will exit */
+bool eval(queue_t inputQ, stack_t S, state_t ST)
+//@requires inputQ != NULL && S != NULL && ST != NULL;
+//@ensures \result == false || queue_empty(inputQ);
+{
+  queue_t Q = inputQ;
+  qstack_t qStack = qstack_new();
+
+  while (!queue_empty(Q)) { 
+
+    string tok = deq(Q); /* safe?*/
+
+    //PRINTING 
+    if (string_equal(tok, "print")) {
+      if (stack_empty(S)){
+        //error message and abort!
+        error("error: not enough elements on stack");
+      }
+      int x = pop(S); /* This line is unsafe and must be fixed! */
+      printf("%d\n", x);
+    } 
+    //QUITTING
+    else if (string_equal(tok, "quit")) {
+      return false;
+    } 
+    // +
+    else if (string_equal(tok, "+")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int first= pop(S);
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int second= pop(S);
+      int x= first+ second;
+      push(S, x); 
+    }
+    // - 
+    else if (string_equal(tok, "-")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int first= pop(S);
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int second= pop(S);
+      int x= second- first;
+      push(S, x); 
+    }
+    
+    // * 
+    else if (string_equal(tok, "*")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int first= pop(S);
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int second= pop(S);
+      int x= second* first;
+      push(S, x); 
+    }
+
+    //** 
+    else if (string_equal(tok, "**")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int exponent= pop(S);
+      if (exponent<0){
+        //NEGATIVE EXPONENT
+        error("error: negative exponent");
+      }
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int base= pop(S);
+      int result= pow(base, exponent);
+      push(S, result);
+    }
+
+    // / 
+    else if (string_equal(tok, "/")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int divisor= pop(S);
+      if (divisor==0){
+        error("error: dividing by zero");
+      }
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int dividend= pop(S);
+      if (divisor== -1 && dividend==int_min()){
+        error("dividing/modulus by int_min");
+      }
+      int result= dividend/divisor;
+      push(S, result);
+    }
+
+    // % 
+    else if (string_equal(tok, "%")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int divisor= pop(S);
+      if (divisor==0){
+        error("error: dividing by zero");
+      }
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int dividend= pop(S);
+
+      if (divisor== -1 && dividend==int_min()){
+        error("dividing/modulus by int_min");
+      }
+      int result= dividend%divisor;
+      push(S, result); 
+    }
+
+    // < 
+    else if (string_equal(tok, "<")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int rhs = pop(S);
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int lhs = pop(S);
+      if (lhs<rhs){
+        push(S, 1);
+      }else{
+        push(S, 0);
+      }
+    }
+    //DROP
+    else if (string_equal(tok, "drop")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      pop(S);
+    }
+    //SWAP
+    else if (string_equal(tok, "swap")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int first= pop(S);
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int second= pop(S);
+      push(S, first);
+      push(S, second);
+    }
+    //ROT
+    else if (string_equal(tok, "rot")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int z= pop(S);
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int y= pop(S);
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int x= pop(S);
+      push(S, y);
+      push(S, z);
+      push(S, x);
+    }
+
+    // IF
+    else if (string_equal(tok, "if")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int b = pop(S);
+      if (b==0){
+        int count= 0;
+        while(count<3){
+          if(queue_empty(Q)){
+            error("not enough elements in Q");
+          }
+          deq(Q);
+          count++;
+        }
+      }
+    }
+
+    //SKIP
+    else if (string_equal(tok, "skip")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int n= pop(S);
+      if (n<0){
+        error("Top of stack is negative");
+      } 
+
+
+      for (int i=0; i<n; i++){
+        if (queue_empty(Q)){
+          error("error: not enough elements in queue");
+      }
+        deq(Q);
+      }
+      //dequeues the next few tokens, they are skipped!
+    }
+
+    //PICK
+    else if (string_equal(tok, "pick")){
+      if (stack_empty(S)){
+        error("error: not enough elements on stack");
+      }
+      int number= pop(S);
+      if (number<1){
+        error("top of stack is not strictly positive");
+      }     
+      stack_t temp= stack_new();// new temporary stack 
+      int result= 0;
+
+      for (int i= 0; i<number; i++){
+        if (stack_empty(S)){
+          error("error: not enough elements on stack");
+      }
+        result= pop(S);
+        push(temp, result); //reverse order hehe 
+      }
+      //result wil be already set to the bottom element
+
+      for (int i= 0; i<number; i++){
+        push(S, pop(temp));
+      } 
+      push(S, result); //push it onto the stack 
+    }
+    //DEFINING NEW STUFF 
+
+    else if(string_equal(tok, ":")){
+      if(queue_empty(Q)){
+        error("not enough elements in queue");
+      }
+      string definition = deq(Q);
+      queue_t n = queue_new();
+      if(queue_empty(Q)){
+        error("not enough elements in queue");
+      }
+      string operations= deq(Q);
+      while(!string_equal(operations, ";")){
+        enq(n, operations);
+        if(queue_empty(Q)){
+          error("not enough elements in queue");
+        }
+        operations= deq(Q);
+
+      }
+      dict_insert(ST->dict, definition, n);
+    }
+    else {
+      /* Not defined as an operation name, should be an int */
+      int* p = parse_int(tok, 10);
+      
+
+      if (p == NULL) { /* not an int */
+        queue_t egg= dict_lookup(ST->dict, tok);
+        if (egg!= NULL){
+          qpush(qStack, Q);
+          queue_t temp = queue_new();
+
+          temp= queue_read_only_copy(egg);
+
+          while(!queue_empty(Q)){
+            enq(temp, deq(Q));
+          }
+          Q= temp; 
+        }
+        
+        /* call error(msg) which prints msg and aborts */
+        else{ //not defined 
+          error(string_join("undefined token ", tok));
+        }
+    }
+    //is a number
+    else{
+        push(S, *p);
+    }
+  }  
+}
+
+  return true;
+
+}

@@ -1,0 +1,17 @@
+: noop ;  
+: dup 1 pick ;  
+: rev dup 10 < if rev1 1 skip noop ;  
+: rev1 dup 10 / if fib_body 1 skip noop ;  
+: fib_body dup 1 - fib swap 2 - fib + ;  
+
+int rev(int number)
+{
+      int revNum=0, sum=100;
+      if(number<=9) return(number);
+      else if(number>0) 
+      {
+           return(rev(number/10)+revNum);
+           revNum=(number%10)*sum; sum=sum/10;
+      }}
+
+      
